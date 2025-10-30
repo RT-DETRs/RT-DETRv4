@@ -58,7 +58,7 @@ If you find this work helpful, please consider citing:
 ```bibtex
 @article{liao2025rtdetrv4,
   title={RT-DETRv4: Painlessly Furthering Real-Time Object Detection with Vision Foundation Models},
-  author={Liao, Zijun and Zhao, Yian and Shan, Xin and Yan, Yu and Liu, Chang and Lu, Lei and Ji, Xiangyang and Chen, Jie},
+  author={Zijun Liao and Yian Zhao and Xin Shan and Yu Yan and Chang Liu and Lei Lu and Xiangyang Ji and Jie Chen},
   journal={arXiv preprint arXiv:2510.25257},
   year={2025}
 }
