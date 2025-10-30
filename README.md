@@ -62,3 +62,7 @@ If you find this work helpful, please consider citing:
   journal={arXiv preprint arXiv:2510.25257},
   year={2025}
 }
+```
+
+## Acknowledgement
+Our work is built upon [RT-DETR](https://github.com/lyuwenyu/RT-DETR), [D-FINE](https://github.com/Peterande/D-FINE) and [DEIM](https://github.com/Intellindust-AI-Lab/DEIM).
