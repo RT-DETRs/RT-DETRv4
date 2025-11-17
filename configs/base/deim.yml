@@ -1,0 +1,48 @@
+# Dense O2O
+train_dataloader: 
+  dataset: 
+    transforms:
+      ops:
+        - {type: Mosaic, output_size: 320, rotation_range: 10, translation_range: [0.1, 0.1], scaling_range: [0.5, 1.5],
+           probability: 1.0, fill_value: 0, use_cache: False, max_cached_images: 50, random_pop: True}
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [640, 640], }
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        epoch: [4, 29, 50]   # list 
+        ops: ['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']
+      mosaic_prob: 0.5
+
+  collate_fn:
+    mixup_prob: 0.5
+    mixup_epochs: [4, 29]
+    stop_epoch: 50    # epoch in [72, ~) stop `multiscales`
+
+# Unfreezing BN
+HGNetv2:
+  freeze_at: -1         # 0 default
+  freeze_norm: False    # True default
+
+# Activation
+DFINETransformer:
+  activation: silu
+  mlp_act: silu
+
+## Our LR-Scheduler
+lrsheduler: flatcosine
+lr_gamma: 0.5
+warmup_iter: 2000
+flat_epoch: 29    # 4 + epoch // 2, e.g., 40 = 4 + 72 / 2
+no_aug_epoch: 8
+
+## Our Loss
+RTv4Criterion:
+  weight_dict: {loss_mal: 1, loss_bbox: 5, loss_giou: 2, loss_fgl: 0.15, loss_ddf: 1.5}
+  losses: ['mal', 'boxes', 'local']
+  gamma: 1.5

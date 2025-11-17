@@ -1,0 +1,50 @@
+__include__: [
+  '../../dfine/object365/dfine_hgnetv2_x_obj2coco.yml',
+  '../../base/rtv4.yml'
+]
+
+output_dir: ./deim_outputs/deim_hgnetv2_x_obj2coco_24e
+  
+HGNetv2:
+  freeze_at: 0         # 0 default
+  freeze_norm: True    # True default
+  
+# Activation
+DFINETransformer:
+  activation: relu
+  mlp_act: relu
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.0000025
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn)).*$'
+      weight_decay: 0.
+
+  lr: 0.00025
+  betas: [0.9, 0.999]
+  weight_decay: 0.000125
+  
+# Increase to search for the optimal ema
+epoches: 24 # 72 + 2n
+
+## Our LR-Scheduler
+lrsheduler: flatcosine
+lr_gamma: 1
+warmup_iter: 0    # 0
+flat_epoch: 12000    # 4 + epoch // 2, e.g., 40 = 4 + 72 / 2
+no_aug_epoch: 4
+
+## Our DataAug
+train_dataloader: 
+  dataset: 
+    transforms:
+      policy:
+        epoch: [2, 12, 20]   # list 
+
+  collate_fn:
+    mixup_epochs: [2, 12]
+    stop_epoch: 20
