@@ -479,14 +479,15 @@ class RTDETRTransformerv2(nn.Module):
 
         anchors = []
         for lvl, (h, w) in enumerate(spatial_shapes):
-            grid_y, grid_x = torch.meshgrid(torch.arange(h), torch.arange(w), indexing='ij')
+            grid_y, grid_x = torch.meshgrid(
+                torch.arange(h, device=device), torch.arange(w, device=device), indexing='ij')
             grid_xy = torch.stack([grid_x, grid_y], dim=-1)
-            grid_xy = (grid_xy.unsqueeze(0) + 0.5) / torch.tensor([w, h], dtype=dtype)
+            grid_xy = (grid_xy.unsqueeze(0) + 0.5) / torch.tensor([w, h], dtype=dtype, device=device)
             wh = torch.ones_like(grid_xy) * grid_size * (2.0 ** lvl)
             lvl_anchors = torch.concat([grid_xy, wh], dim=-1).reshape(-1, h * w, 4)
             anchors.append(lvl_anchors)
 
-        anchors = torch.concat(anchors, dim=1).to(device)
+        anchors = torch.concat(anchors, dim=1)
         valid_mask = ((anchors > self.eps) * (anchors < 1 - self.eps)).all(-1, keepdim=True)
         anchors = torch.log(anchors / (1 - anchors))
         anchors = torch.where(valid_mask, anchors, torch.inf)
