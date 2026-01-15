@@ -392,16 +392,16 @@ class HybridEncoder(nn.Module):
                 # self.register_buffer(f'pos_embed{idx}', pos_embed)
 
     @staticmethod
-    def build_2d_sincos_position_embedding(w, h, embed_dim=256, temperature=10000.):
+    def build_2d_sincos_position_embedding(w, h, embed_dim=256, temperature=10000., device=None):
         """
         """
-        grid_w = torch.arange(int(w), dtype=torch.float32)
-        grid_h = torch.arange(int(h), dtype=torch.float32)
+        grid_w = torch.arange(int(w), dtype=torch.float32, device=device)
+        grid_h = torch.arange(int(h), dtype=torch.float32, device=device)
         grid_w, grid_h = torch.meshgrid(grid_w, grid_h, indexing='ij')
         assert embed_dim % 4 == 0, \
             'Embed dimension must be divisible by 4 for 2D sin-cos position embedding'
         pos_dim = embed_dim // 4
-        omega = torch.arange(pos_dim, dtype=torch.float32) / pos_dim
+        omega = torch.arange(pos_dim, dtype=torch.float32, device=device) / pos_dim
         omega = 1. / (temperature ** omega)
 
         out_w = grid_w.flatten()[..., None] @ omega[None]
@@ -423,9 +423,10 @@ class HybridEncoder(nn.Module):
                 src_flatten = proj_feats[enc_ind].flatten(2).permute(0, 2, 1)
                 if self.training or self.eval_spatial_size is None:
                     pos_embed = self.build_2d_sincos_position_embedding(
-                        w, h, self.hidden_dim, self.pe_temperature).to(src_flatten.device)
+                        w, h, self.hidden_dim, self.pe_temperature, device=src_flatten.device)
                 else:
-                    pos_embed = getattr(self, f'pos_embed{enc_ind}', None).to(src_flatten.device)
+                    # pos_embed is registered as buffer (done in inference wrapper), already on correct device
+                    pos_embed = getattr(self, f'pos_embed{enc_ind}', None)
 
                 memory :torch.Tensor = self.encoder[i](src_flatten, src_mask=None, pos_embed=pos_embed)
 
