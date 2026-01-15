@@ -25,12 +25,25 @@
 This is the official implementation of the paper:
 * [RT-DETRv4: Painlessly Furthering Real-Time Object Detection with Vision Foundation Models](https://arxiv.org/abs/2510.25257)
 
+
 ## 🚀 Overview
 
 **RT-DETRv4 is the new version of the state-of-the-art real-time object detector family, RT-DETR.** It introduces a cost-effective and adaptable distillation framework that leverages the powerful representations of Vision Foundation Models (VFMs) to enhance lightweight detectors.
 <p align="center">
   <img src="./figures/rtv4_ap_latency.png" alt="Image" width="49%">
 </p>
+<details open>
+<summary> 🎥 Demo: Furious 7 </summary>
+
+We challenge **RT-DETRv4** with the high-speed scene from *Furious 7*. Even under extreme motion blur, rapid camera pans, and chaotic lighting, the model maintains consistent tracking and high recall, proving its reliability in dynamic environments.
+
+<div align="center">
+
+https://github.com/user-attachments/assets/e610b13b-a6bb-420b-ac6f-a752f61d0d84
+
+</div>
+
+</details>
 
 ## ⚡ Performance
 
