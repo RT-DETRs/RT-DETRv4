@@ -84,9 +84,42 @@ class BaseSolver(object):
             if dist_utils.is_main_process():
                 self.writer.add_text('config', '{:s}'.format(cfg.__repr__()), 0)
 
+        # Initialize MLflow
+        self.mlflow_run = None
+        if cfg.use_mlflow and dist_utils.is_main_process():
+            try:
+                import mlflow
+                import mlflow.pytorch
+                
+                # Set tracking URI if provided
+                if cfg.mlflow_tracking_uri:
+                    mlflow.set_tracking_uri(cfg.mlflow_tracking_uri)
+                
+                # Set experiment
+                if cfg.mlflow_experiment_name:
+                    mlflow.set_experiment(cfg.mlflow_experiment_name)
+                
+                # Start run
+                run_name = cfg.mlflow_run_name if cfg.mlflow_run_name else f"rt-detrv4-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+                self.mlflow_run = mlflow.start_run(run_name=run_name)
+                atexit.register(mlflow.end_run)
+                print(f"MLflow run started: {self.mlflow_run.info.run_id}")
+            except ImportError:
+                print("Warning: mlflow not installed, skipping MLflow logging")
+                self.mlflow_run = None
+            except Exception as e:
+                print(f"Warning: Failed to initialize MLflow: {e}")
+                self.mlflow_run = None
+
     def cleanup(self):
         if self.writer:
             atexit.register(self.writer.close)
+        if hasattr(self, 'mlflow_run') and self.mlflow_run:
+            try:
+                import mlflow
+                mlflow.end_run()
+            except:
+                pass
 
     def train(self):
         self._setup()

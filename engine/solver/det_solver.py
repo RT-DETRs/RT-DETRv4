@@ -40,6 +40,31 @@ class DetSolver(BaseSolver):
         n_parameters = sum([p.numel() for p in self.model.parameters() if p.requires_grad])
         print(f'number of trainable parameters: {n_parameters}')
 
+        # Log parameters to MLflow at the start of training
+        if hasattr(self, 'mlflow_run') and self.mlflow_run and dist_utils.is_main_process():
+            try:
+                import mlflow
+                # Log hyperparameters
+                params_to_log = {
+                    'epochs': args.epoches,
+                    'batch_size': args.train_batch_size if hasattr(args, 'train_batch_size') and args.train_batch_size else (args.batch_size if hasattr(args, 'batch_size') else None),
+                    'n_parameters': n_parameters,
+                    'use_amp': args.use_amp,
+                    'use_ema': args.use_ema,
+                    'clip_max_norm': args.clip_max_norm,
+                }
+                # Add optional parameters
+                if args.use_ema and hasattr(args, 'ema_decay'):
+                    params_to_log['ema_decay'] = args.ema_decay
+                # Log model architecture info
+                if hasattr(self, 'model') and self.model is not None:
+                    params_to_log['model_type'] = type(self.model).__name__
+                # Filter out None values
+                params_to_log = {k: v for k, v in params_to_log.items() if v is not None}
+                mlflow.log_params(params_to_log)
+            except Exception as e:
+                print(f"Warning: Failed to log parameters to MLflow: {e}")
+
         top1 = 0
         best_stat = {'epoch': -1, }
         # evaluate again before resume training
@@ -62,6 +87,21 @@ class DetSolver(BaseSolver):
         best_stat_print = best_stat.copy()
         start_time = time.time()
         start_epoch = self.last_epoch + 1
+        
+        # Log optimizer parameters to MLflow after optimizer is initialized
+        if hasattr(self, 'mlflow_run') and self.mlflow_run and dist_utils.is_main_process() and start_epoch == 0:
+            try:
+                import mlflow
+                if hasattr(self, 'optimizer') and self.optimizer is not None:
+                    if hasattr(self.optimizer, 'param_groups') and len(self.optimizer.param_groups) > 0:
+                        first_group = self.optimizer.param_groups[0]
+                        if 'lr' in first_group:
+                            mlflow.log_param('learning_rate', first_group['lr'])
+                        if 'weight_decay' in first_group:
+                            mlflow.log_param('weight_decay', first_group['weight_decay'])
+            except Exception as e:
+                print(f"Warning: Failed to log optimizer parameters to MLflow: {e}")
+        
         for epoch in range(start_epoch, args.epoches):
 
             self.train_dataloader.set_epoch(epoch)
@@ -188,9 +228,37 @@ class DetSolver(BaseSolver):
                         if test_stats[k][0] > top1:
                             top1 = test_stats[k][0]
                             dist_utils.save_on_master(self.state_dict(), self.output_dir / 'best_stg2.pth')
+                            # Log best model to MLflow
+                            if hasattr(self, 'mlflow_run') and self.mlflow_run and dist_utils.is_main_process():
+                                try:
+                                    import mlflow
+                                    import mlflow.pytorch
+                                    module = self.ema.module if self.ema else self.model
+                                    mlflow.pytorch.log_model(
+                                        dist_utils.de_parallel(module),
+                                        artifact_path="best_model_stg2",
+                                        registered_model_name=None
+                                    )
+                                    mlflow.log_metric(f'best_{k}_stg2', test_stats[k][0], step=epoch)
+                                except Exception as e:
+                                    print(f"Warning: Failed to log model to MLflow: {e}")
                     else:
                         top1 = max(test_stats[k][0], top1)
                         dist_utils.save_on_master(self.state_dict(), self.output_dir / 'best_stg1.pth')
+                        # Log best model to MLflow
+                        if hasattr(self, 'mlflow_run') and self.mlflow_run and dist_utils.is_main_process():
+                            try:
+                                import mlflow
+                                import mlflow.pytorch
+                                module = self.ema.module if self.ema else self.model
+                                mlflow.pytorch.log_model(
+                                    dist_utils.de_parallel(module),
+                                    artifact_path="best_model_stg1",
+                                    registered_model_name=None
+                                )
+                                mlflow.log_metric(f'best_{k}_stg1', test_stats[k][0], step=epoch)
+                            except Exception as e:
+                                print(f"Warning: Failed to log model to MLflow: {e}")
 
                 elif epoch >= self.train_dataloader.collate_fn.stop_epoch:
                     best_stat = {'epoch': -1, }
@@ -210,6 +278,27 @@ class DetSolver(BaseSolver):
                 with (self.output_dir / "log.txt").open("a") as f:
                     f.write(json.dumps(log_stats) + "\n")
 
+            # Log metrics to MLflow
+            if hasattr(self, 'mlflow_run') and self.mlflow_run and dist_utils.is_main_process():
+                try:
+                    import mlflow
+                    # Log all metrics
+                    for key, value in log_stats.items():
+                        if isinstance(value, (int, float)):
+                            mlflow.log_metric(key, value, step=epoch)
+                        elif isinstance(value, (list, tuple)) and len(value) > 0:
+                            # For metrics like AP, AP50, AP75
+                            for i, v in enumerate(value):
+                                if isinstance(v, (int, float)):
+                                    mlflow.log_metric(f'{key}_{i}', v, step=epoch)
+                    # Log learning rate if available
+                    if hasattr(self.optimizer, 'param_groups') and len(self.optimizer.param_groups) > 0:
+                        lr = self.optimizer.param_groups[0].get('lr', None)
+                        if lr is not None:
+                            mlflow.log_metric('learning_rate', lr, step=epoch)
+                except Exception as e:
+                    print(f"Warning: Failed to log metrics to MLflow: {e}")
+
                 # for evaluation logs
                 if coco_evaluator is not None:
                     (self.output_dir / 'eval').mkdir(exist_ok=True)
@@ -224,6 +313,15 @@ class DetSolver(BaseSolver):
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
+
+        # Log final training time to MLflow
+        if hasattr(self, 'mlflow_run') and self.mlflow_run and dist_utils.is_main_process():
+            try:
+                import mlflow
+                mlflow.log_metric('total_training_time_seconds', total_time)
+                mlflow.log_metric('total_training_time_hours', total_time / 3600)
+            except Exception as e:
+                print(f"Warning: Failed to log training time to MLflow: {e}")
 
 
     def val(self, ):

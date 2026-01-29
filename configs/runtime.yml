@@ -18,3 +18,10 @@ ema:
   type: ModelEMA
   decay: 0.9999
   warmups: 1000
+
+
+# MLflow settings
+use_mlflow: True
+mlflow_tracking_uri: https://dagshub.com/trustay.ai.lab/rtv4.mlflow  # If null, uses default local file store (./mlruns)
+mlflow_experiment_name: 'rt-detrv4-experiment'  # Experiment name in MLflow
+mlflow_run_name: null  # If null, auto-generates with timestamp

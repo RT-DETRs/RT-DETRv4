@@ -83,6 +83,12 @@ class BaseConfig(object):
         self.summary_dir :str = None
         self.device : str = ''
 
+        # MLflow settings
+        self.use_mlflow :bool = False
+        self.mlflow_tracking_uri :str = None
+        self.mlflow_experiment_name :str = None
+        self.mlflow_run_name :str = None
+
         # distillation: General distillation control switch
         self._teacher_model: nn.Module = None
 
