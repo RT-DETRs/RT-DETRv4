@@ -44,30 +44,36 @@ def main(args, ):
             self.model = cfg.model.deploy()
             self.postprocessor = cfg.postprocessor.deploy()
 
-        def forward(self, images, orig_target_sizes):
+        def forward(self, images):
             outputs = self.model(images)
-            outputs = self.postprocessor(outputs, orig_target_sizes)
-            return outputs
+            # 고정된 크기 사용
+            orig_target_sizes = torch.tensor([[640, 640]], device=images.device, dtype=torch.int64)
+            if images.shape[0] > 1:
+                orig_target_sizes = orig_target_sizes.repeat(images.shape[0], 1)
+            labels, boxes, scores = self.postprocessor(outputs, orig_target_sizes)
+            
+            # 타입 통일 및 concat: [boxes(4), scores(1), labels(1)]
+            labels_float = labels.float()  # int64 -> float32
+            output = torch.cat([boxes, scores.unsqueeze(-1), labels_float.unsqueeze(-1)], dim=-1)
+            return output
 
     model = Model()
 
     data = torch.rand(32, 3, 640, 640)
-    size = torch.tensor([[640, 640]])
-    _ = model(data, size)
+    _ = model(data)
 
     dynamic_axes = {
         'images': {0: 'N', },
-        'orig_target_sizes': {0: 'N'}
     }
 
     output_file = args.resume.replace('.pth', '.onnx') if args.resume else 'model.onnx'
 
     torch.onnx.export(
         model,
-        (data, size),
+        (data,),
         output_file,
-        input_names=['images', 'orig_target_sizes'],
-        output_names=['labels', 'boxes', 'scores'],
+        input_names=['images'],
+        output_names=['output'],
         dynamic_axes=dynamic_axes,
         opset_version=16,
         verbose=False,
@@ -84,8 +90,7 @@ def main(args, ):
         import onnx
         import onnxsim
         dynamic = True
-        # input_shapes = {'images': [1, 3, 640, 640], 'orig_target_sizes': [1, 2]} if dynamic else None
-        input_shapes = {'images': data.shape, 'orig_target_sizes': size.shape} if dynamic else None
+        input_shapes = {'images': data.shape} if dynamic else None
         onnx_model_simplify, check = onnxsim.simplify(output_file, test_input_shapes=input_shapes)
         onnx.save(onnx_model_simplify, output_file)
         print(f'Simplify onnx model {check}...')
