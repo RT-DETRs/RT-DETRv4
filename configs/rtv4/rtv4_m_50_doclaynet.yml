@@ -1,0 +1,102 @@
+__include__: [
+  '../dataset/doclaynet_detection.yml',
+  '../runtime.yml',
+  '../base/dataloader.yml',
+  '../base/optimizer.yml',
+  '../base/dfine_hgnetv2.yml',
+]
+
+output_dir: ./output/rtv4_m_doclaynet_50e
+
+# Weights & Biases logging
+use_wandb: True
+wandb_project: rt-detrv4-doclaynet
+wandb_name: rtv4_m_doclaynet_50e
+
+# ==========================================
+# НАСТРОЙКИ M-МОДЕЛИ (Medium)
+# ==========================================
+RTv4:
+  backbone: HGNetv2
+
+HGNetv2:
+  name: 'B2'
+  return_idx: [1, 2, 3]
+  freeze_at: -1
+  freeze_norm: False
+  use_lab: True
+
+DFINETransformer:
+  num_layers: 4
+  eval_idx: -1
+
+HybridEncoder:
+  distill_teacher_dim: 1024
+  in_channels: [384, 768, 1536]
+  hidden_dim: 256
+  depth_mult: 0.67
+
+# Оценка при том же разрешении, что и обучение
+eval_spatial_size: [640, 640]
+
+# Оптимизатор (адаптирован под M-модель)
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.00002
+    -
+      params: '^(?=.*backbone)(?=.*norm|bn).*$'
+      lr: 0.00002
+      weight_decay: 0.
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn|bias)).*$'
+      weight_decay: 0.
+  lr: 0.0002
+  betas: [0.9, 0.999]
+  weight_decay: 0.0001
+
+# ==========================================
+# РАСПИСАНИЕ НА 50 ЭПОХ
+# ==========================================
+epoches: 50
+flat_epoch: 25      # epoches // 2
+no_aug_epoch: 10    # последние 10 эпох без тяжелых аугментаций
+
+use_amp: True
+
+# ==========================================
+# DATALOADER ОБУЧЕНИЯ
+# ==========================================
+train_dataloader:
+  total_batch_size: 12  # Модель M легче, батч 16 должен уверенно поместиться в 16 ГБ
+  num_workers: 8
+  persistent_workers: True
+  dataset:
+    transforms:
+      ops:
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [640, 640]}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        epoch: [10, 25, 40]   # Точки изменения аугментаций отмасштабированы на 50 эпох
+        ops: ['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']
+      mosaic_prob: 0.5
+  collate_fn:
+    base_size: 640
+    mixup_epochs: [10, 25]  # Масштаб MixUp
+    stop_epoch: 40          # Строго epoches - no_aug_epoch (50 - 10 = 40)
+
+# ==========================================
+# DATALOADER ВАЛИДАЦИИ (ЗАЩИТА ОТ OOM)
+# ==========================================
+val_dataloader:
+  total_batch_size: 4       # ВАЖНО: Сниженный батч для безопасной валидации без падений WSL!
+  num_workers: 8

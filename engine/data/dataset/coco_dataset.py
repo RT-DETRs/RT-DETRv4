@@ -52,7 +52,7 @@ class CocoDetection(torchvision.datasets.CocoDetection, DetDataset):
         if self.remap_mscoco_category:
             image, target = self.prepare(image, target, category2label=mscoco_category2label)
         else:
-            image, target = self.prepare(image, target)
+            image, target = self.prepare(image, target, category2label=self.category2label)
 
         target['idx'] = torch.tensor([idx])
 

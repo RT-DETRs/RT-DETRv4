@@ -83,6 +83,11 @@ class BaseConfig(object):
         self.summary_dir :str = None
         self.device : str = ''
 
+        # wandb
+        self.use_wandb: bool = False
+        self.wandb_project: str = 'rt-detr-v4'
+        self.wandb_name: str = None
+
         # distillation: General distillation control switch
         self._teacher_model: nn.Module = None
 
@@ -290,10 +295,18 @@ class BaseConfig(object):
     @property
     def writer(self) -> SummaryWriter:
         if self._writer is None:
-            if self.summary_dir:
-                self._writer = SummaryWriter(self.summary_dir)
-            elif self.output_dir:
-                self._writer = SummaryWriter(Path(self.output_dir) / 'summary')
+            log_dir = self.summary_dir or (str(Path(self.output_dir) / 'summary') if self.output_dir else None)
+            if log_dir is None:
+                return None
+            if self.use_wandb:
+                from ..misc.wandb_writer import WandbWriter
+                self._writer = WandbWriter(
+                    log_dir=log_dir,
+                    project=self.wandb_project,
+                    name=self.wandb_name,
+                )
+            else:
+                self._writer = SummaryWriter(log_dir)
         return self._writer
 
     @writer.setter

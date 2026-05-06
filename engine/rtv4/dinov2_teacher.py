@@ -41,14 +41,15 @@ class DINOv2TeacherModel(nn.Module):
         _logger.info(f"[Teacher Model] Model name: {model_name}")
 
         try:
-            # Load model architecture
+            # Load model architecture only (pretrained=False prevents auto-download)
             self.model = torch.hub.load(
                 dinov2_repo_path,
                 model_name,
-                source='local'
+                source='local',
+                pretrained=False,
             )
 
-            # Load weights
+            # Load weights from local file
             if weights_path:
                 _logger.info(f"[Teacher Model] Loading weights from: {weights_path}")
                 state_dict = torch.load(weights_path, map_location='cpu')

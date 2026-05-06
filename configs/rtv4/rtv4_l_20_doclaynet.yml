@@ -1,0 +1,82 @@
+__include__: [
+  '../dataset/doclaynet_detection.yml',
+  '../runtime.yml',
+  '../base/dataloader.yml',
+  '../base/optimizer.yml',
+  '../base/dfine_hgnetv2.yml',
+]
+
+output_dir: ./output/rtv4_l_doclaynet
+
+# Weights & Biases logging
+use_wandb: True
+wandb_project: rt-detrv4-doclaynet
+wandb_name: rtv4_l_doclaynet_run1
+
+# L-модель: бэкбон HGNetv2-B4
+HGNetv2:
+  name: 'B4'
+  return_idx: [1, 2, 3]
+  freeze_stem_only: True
+  freeze_at: 0
+  freeze_norm: True
+
+# Оценка при том же разрешении, что и обучение
+eval_spatial_size: [640, 640]
+
+# DINOv2 учитель отключён — D-FINE обучение без дистилляции (~2x быстрее)
+# teacher_model: ...
+
+HybridEncoder:
+  distill_teacher_dim: 1024
+
+# Оптимизатор: пониженный LR для бэкбона (transfer learning)
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.00001
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn)).*$'
+      weight_decay: 0.
+  lr: 0.0001
+  betas: [0.9, 0.999]
+  weight_decay: 0.0001
+
+epoches: 20
+flat_epoch: 10      # epoches // 2
+no_aug_epoch: 5     # последние 5 эпох без тяжёлых аугментаций
+
+# RTX 5070 Ti 16 GB, одна GPU
+# AMP включён → VRAM ~8-10 GB → batch_size 16 при 640x640
+use_amp: True
+
+train_dataloader:
+  total_batch_size: 12
+  num_workers: 8
+  persistent_workers: True
+  dataset:
+    transforms:
+      ops:
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [640, 640]}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        epoch: [4, 10, 15]
+        ops: ['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']
+      mosaic_prob: 0.5
+  collate_fn:
+    base_size: 640
+    mixup_epochs: [4, 10]
+    stop_epoch: 15
+
+val_dataloader:
+  total_batch_size: 12
+  num_workers: 8

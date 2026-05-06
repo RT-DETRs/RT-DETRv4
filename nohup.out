@@ -1,0 +1,218 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/xdota/.netrc.
+wandb: Currently logged in as: xdotawinx (xdotawinx-itmo) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run y7meparq
+wandb: Tracking run with wandb version 0.26.1
+wandb: Run data is saved locally in output/rtv4_l_doclaynet/summary/wandb/run-20260504_234014-y7meparq
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run rtv4_l_doclaynet_run1
+wandb: ⭐️ View project at https://wandb.ai/xdotawinx-itmo/rt-detrv4-doclaynet
+wandb: 🚀 View run at https://wandb.ai/xdotawinx-itmo/rt-detrv4-doclaynet/runs/y7meparq
+Not init distributed mode.
+cfg:  {'task': 'detection', '_model': None, '_postprocessor': None, '_criterion': None, '_optimizer': None, '_lr_scheduler': None, '_lr_warmup_scheduler': None, '_train_dataloader': None, '_val_dataloader': None, '_ema': None, '_scaler': None, '_train_dataset': None, '_val_dataset': None, '_collate_fn': None, '_evaluator': None, '_writer': None, 'num_workers': 0, 'batch_size': None, '_train_batch_size': None, '_val_batch_size': None, '_train_shuffle': None, '_val_shuffle': None, 'resume': 'output/rtv4_l_doclaynet/last.pth', 'tuning': None, 'epoches': 20, 'last_epoch': -1, 'lrsheduler': 'flatcosine', 'lr_gamma': 1, 'no_aug_epoch': 5, 'warmup_iter': 500, 'flat_epoch': 10, 'use_amp': False, 'use_ema': True, 'ema_decay': 0.9999, 'ema_warmups': 2000, 'sync_bn': True, 'clip_max_norm': 0.1, 'find_unused_parameters': False, 'seed': None, 'print_freq': 100, 'checkpoint_freq': 4, 'output_dir': './output/rtv4_l_doclaynet', 'summary_dir': None, 'device': '', 'use_wandb': True, 'wandb_project': 'rt-detrv4-doclaynet', 'wandb_name': 'rtv4_l_doclaynet_run1', '_teacher_model': None, 'yaml_cfg': {'task': 'detection', 'evaluator': {'type': 'CocoEvaluator', 'iou_types': ['bbox']}, 'num_classes': 11, 'remap_mscoco_category': False, 'train_dataloader': {'type': 'DataLoader', 'dataset': {'type': 'CocoDetection', 'img_folder': '../data/PNG/', 'ann_file': '../data/COCO/train.json', 'return_masks': False, 'transforms': {'type': 'Compose', 'ops': [{'type': 'RandomPhotometricDistort', 'p': 0.5}, {'type': 'RandomZoomOut', 'fill': 0}, {'type': 'RandomIoUCrop', 'p': 0.8}, {'type': 'SanitizeBoundingBoxes', 'min_size': 1}, {'type': 'RandomHorizontalFlip'}, {'type': 'Resize', 'size': [640, 640]}, {'type': 'SanitizeBoundingBoxes', 'min_size': 1}, {'type': 'ConvertPILImage', 'dtype': 'float32', 'scale': True}, {'type': 'ConvertBoxes', 'fmt': 'cxcywh', 'normalize': True}], 'policy': {'name': 'stop_epoch', 'epoch': [4, 10, 15], 'ops': ['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']}, 'mosaic_prob': 0.5}}, 'shuffle': True, 'num_workers': 8, 'drop_last': True, 'collate_fn': {'type': 'BatchImageCollateFunction', 'base_size': 640, 'base_size_repeat': 3, 'stop_epoch': 15, 'mixup_epochs': [4, 10]}, 'total_batch_size': 16, 'pin_memory': True, 'persistent_workers': True}, 'val_dataloader': {'type': 'DataLoader', 'dataset': {'type': 'CocoDetection', 'img_folder': '../data/PNG/', 'ann_file': '../data/COCO/val.json', 'return_masks': False, 'transforms': {'type': 'Compose', 'ops': [{'type': 'Resize', 'size': [640, 640]}, {'type': 'ConvertPILImage', 'dtype': 'float32', 'scale': True}]}}, 'shuffle': False, 'num_workers': 8, 'drop_last': False, 'collate_fn': {'type': 'BatchImageCollateFunction'}, 'total_batch_size': 16}, 'print_freq': 100, 'output_dir': './output/rtv4_l_doclaynet', 'checkpoint_freq': 4, 'sync_bn': True, 'find_unused_parameters': False, 'use_amp': False, 'scaler': {'type': 'GradScaler', 'enabled': True}, 'use_ema': True, 'ema': {'type': 'ModelEMA', 'decay': 0.9999, 'warmups': 1000, 'start': 0}, 'epoches': 20, 'clip_max_norm': 0.1, 'optimizer': {'type': 'AdamW', 'params': [{'params': '^(?=.*backbone)(?!.*norm|bn).*$', 'lr': 1e-05}, {'params': '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn)).*$', 'weight_decay': 0.0}], 'lr': 0.0001, 'betas': [0.9, 0.999], 'weight_decay': 0.0001}, 'lr_scheduler': {'type': 'MultiStepLR', 'milestones': [500], 'gamma': 0.1}, 'lr_warmup_scheduler': {'type': 'LinearWarmup', 'warmup_duration': 500}, 'model': 'RTv4', 'criterion': 'RTv4Criterion', 'postprocessor': 'PostProcessor', 'use_focal_loss': True, 'eval_spatial_size': [640, 640], 'RTv4': {'backbone': 'HGNetv2', 'encoder': 'HybridEncoder', 'decoder': 'DFINETransformer'}, 'lrsheduler': 'flatcosine', 'lr_gamma': 1, 'warmup_iter': 500, 'flat_epoch': 10, 'no_aug_epoch': 5, 'HGNetv2': {'pretrained': False, 'local_model_dir': './pretrain/hgnetv2/', 'name': 'B4', 'return_idx': [1, 2, 3], 'freeze_stem_only': True, 'freeze_at': 0, 'freeze_norm': True}, 'HybridEncoder': {'in_channels': [512, 1024, 2048], 'feat_strides': [8, 16, 32], 'hidden_dim': 256, 'use_encoder_idx': [2], 'num_encoder_layers': 1, 'nhead': 8, 'dim_feedforward': 1024, 'dropout': 0.0, 'enc_act': 'gelu', 'expansion': 1.0, 'depth_mult': 1, 'act': 'silu', 'distill_teacher_dim': 1024}, 'DFINETransformer': {'feat_channels': [256, 256, 256], 'feat_strides': [8, 16, 32], 'hidden_dim': 256, 'num_levels': 3, 'num_layers': 6, 'eval_idx': -1, 'num_queries': 300, 'num_denoising': 100, 'label_noise_ratio': 0.5, 'box_noise_scale': 1.0, 'reg_max': 32, 'reg_scale': 4, 'layer_scale': 1, 'num_points': [3, 6, 3], 'cross_attn_method': 'default', 'query_select_method': 'default'}, 'PostProcessor': {'num_top_queries': 300}, 'RTv4Criterion': {'weight_dict': {'loss_vfl': 1, 'loss_bbox': 5, 'loss_giou': 2, 'loss_fgl': 0.15, 'loss_ddf': 1.5}, 'losses': ['vfl', 'boxes', 'local'], 'alpha': 0.75, 'gamma': 2.0, 'reg_max': 32, 'matcher': {'type': 'HungarianMatcher', 'weight_dict': {'cost_class': 2, 'cost_bbox': 5, 'cost_giou': 2}, 'alpha': 0.25, 'gamma': 2.0}}, '__include__': ['../dataset/doclaynet_detection.yml', '../runtime.yml', '../base/dataloader.yml', '../base/optimizer.yml', '../base/dfine_hgnetv2.yml'], 'use_wandb': True, 'wandb_project': 'rt-detrv4-doclaynet', 'wandb_name': 'rtv4_l_doclaynet_run1', 'config': 'configs/rtv4/rtv4_l_doclaynet.yml', 'resume': 'output/rtv4_l_doclaynet/last.pth', 'test_only': False, 'print_method': 'builtin', 'print_rank': 0}}
+Initial lr: [1e-05, 0.0001, 0.0001]
+building train_dataloader with batch_size=16...
+     ### Transform @RandomPhotometricDistort ###    
+     ### Transform @RandomZoomOut ###    
+     ### Transform @RandomIoUCrop ###    
+     ### Transform @SanitizeBoundingBoxes ###    
+     ### Transform @RandomHorizontalFlip ###    
+     ### Transform @Resize ###    
+     ### Transform @SanitizeBoundingBoxes ###    
+     ### Transform @ConvertPILImage ###    
+     ### Transform @ConvertBoxes ###    
+     ### Mosaic with Prob.@0.5 and ZoomOut/IoUCrop existed ### 
+     ### ImgTransforms Epochs: [4, 10, 15] ### 
+     ### Policy_ops@['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop'] ###
+     ### Multi-scale Training until 15 epochs ### 
+     ### Multi-scales@ [480, 512, 544, 576, 608, 640, 640, 640, 800, 768, 736, 704, 672] ###        
+building val_dataloader with batch_size=16...
+     ### Transform @Resize ###    
+     ### Transform @ConvertPILImage ###    
+Resume checkpoint from output/rtv4_l_doclaynet/last.pth
+Load last_epoch
+Load model.state_dict
+Load criterion.state_dict
+Load postprocessor.state_dict
+Load ema.state_dict
+Load optimizer.state_dict
+Not load lr_scheduler.state_dict
+Load lr_warmup_scheduler.state_dict
+
+------------------------------------- Calculate Flops Results -------------------------------------
+Notations:
+number of parameters (Params), number of multiply-accumulate operations(MACs),
+number of floating-point operations (FLOPs), floating-point operations per second (FLOPS),
+fwd FLOPs (model forward propagation FLOPs), bwd FLOPs (model backward propagation FLOPs),
+default model backpropagation takes 2.00 times as much computation as forward propagation.
+
+Total Training Params:                                                  30.91 M 
+fwd MACs:                                                               45.2972 GMACs
+fwd FLOPs:                                                              90.7271 GFLOPS
+fwd+bwd MACs:                                                           135.892 GMACs
+fwd+bwd FLOPs:                                                          272.181 GFLOPS
+---------------------------------------------------------------------------------------------------
+{'Model FLOPs:90.7271 GFLOPS   MACs:45.2972 GMACs   Params:30934233'}
+------------------------------------------Start training-------------------------------------------
+     ## Using Self-defined Scheduler-flatcosine ## 
+[1e-05, 0.0001, 0.0001] [1e-05, 0.0001, 0.0001] 86700 500 43350 21675
+number of trainable parameters: 31340595
+Test:  [  0/406]  eta: 0:11:43    time: 1.7318  data: 1.4333  max mem: 2441
+Test:  [ 10/406]  eta: 0:03:03    time: 0.4633  data: 0.1736  max mem: 2442
+Test:  [ 20/406]  eta: 0:02:58    time: 0.3998  data: 0.0460  max mem: 2442
+Test:  [ 30/406]  eta: 0:02:24    time: 0.3396  data: 0.0483  max mem: 2442
+Test:  [ 40/406]  eta: 0:02:04    time: 0.2128  data: 0.0534  max mem: 2442
+Test:  [ 50/406]  eta: 0:01:52    time: 0.2090  data: 0.0544  max mem: 2442
+Test:  [ 60/406]  eta: 0:01:43    time: 0.2096  data: 0.0542  max mem: 2442
+Test:  [ 70/406]  eta: 0:01:39    time: 0.2454  data: 0.0540  max mem: 2442
+Test:  [ 80/406]  eta: 0:01:32    time: 0.2404  data: 0.0526  max mem: 2442
+Test:  [ 90/406]  eta: 0:01:26    time: 0.2031  data: 0.0534  max mem: 2442
+Test:  [100/406]  eta: 0:01:22    time: 0.2042  data: 0.0546  max mem: 2442
+Test:  [110/406]  eta: 0:01:17    time: 0.2014  data: 0.0528  max mem: 2442
+Test:  [120/406]  eta: 0:01:13    time: 0.1995  data: 0.0516  max mem: 2442
+Test:  [130/406]  eta: 0:01:09    time: 0.2022  data: 0.0524  max mem: 2442
+Test:  [140/406]  eta: 0:01:07    time: 0.2407  data: 0.0535  max mem: 2442
+Test:  [150/406]  eta: 0:01:04    time: 0.2416  data: 0.0547  max mem: 2442
+Test:  [160/406]  eta: 0:01:01    time: 0.2083  data: 0.0566  max mem: 2442
+Test:  [170/406]  eta: 0:01:01    time: 0.3381  data: 0.0563  max mem: 2442
+Test:  [180/406]  eta: 0:00:58    time: 0.3421  data: 0.0563  max mem: 2442
+Test:  [190/406]  eta: 0:00:55    time: 0.2160  data: 0.0563  max mem: 2442
+Test:  [200/406]  eta: 0:00:53    time: 0.2761  data: 0.0592  max mem: 2442
+Test:  [210/406]  eta: 0:00:50    time: 0.2742  data: 0.0604  max mem: 2442
+Test:  [220/406]  eta: 0:00:47    time: 0.2152  data: 0.0592  max mem: 2442
+Test:  [230/406]  eta: 0:00:44    time: 0.2236  data: 0.0624  max mem: 2442
+Test:  [240/406]  eta: 0:00:42    time: 0.2214  data: 0.0600  max mem: 2442
+Test:  [250/406]  eta: 0:00:39    time: 0.2108  data: 0.0556  max mem: 2442
+Test:  [260/406]  eta: 0:00:36    time: 0.2425  data: 0.0549  max mem: 2442
+Test:  [270/406]  eta: 0:00:34    time: 0.2428  data: 0.0540  max mem: 2442
+Test:  [280/406]  eta: 0:00:31    time: 0.2080  data: 0.0550  max mem: 2442
+Test:  [290/406]  eta: 0:00:28    time: 0.2117  data: 0.0565  max mem: 2442
+Test:  [300/406]  eta: 0:00:26    time: 0.2155  data: 0.0573  max mem: 2442
+Test:  [310/406]  eta: 0:00:24    time: 0.3391  data: 0.0559  max mem: 2442
+Test:  [320/406]  eta: 0:00:21    time: 0.3381  data: 0.0552  max mem: 2442
+Test:  [330/406]  eta: 0:00:19    time: 0.2524  data: 0.0572  max mem: 2442
+Test:  [340/406]  eta: 0:00:16    time: 0.2517  data: 0.0570  max mem: 2442
+Test:  [350/406]  eta: 0:00:14    time: 0.2139  data: 0.0563  max mem: 2442
+Test:  [360/406]  eta: 0:00:11    time: 0.2113  data: 0.0555  max mem: 2442
+Test:  [370/406]  eta: 0:00:08    time: 0.2081  data: 0.0551  max mem: 2442
+Test:  [380/406]  eta: 0:00:06    time: 0.2078  data: 0.0557  max mem: 2442
+Test:  [390/406]  eta: 0:00:03    time: 0.2422  data: 0.0543  max mem: 2442
+Test:  [400/406]  eta: 0:00:01    time: 0.2361  data: 0.0496  max mem: 2442
+Test:  [405/406]  eta: 0:00:00    time: 0.2320  data: 0.0492  max mem: 2442
+Test: Total time: 0:01:40 (0.2473 s / it)
+Averaged stats: 
+Accumulating evaluation results...
+COCOeval_opt.accumulate() finished...
+DONE (t=3.04s).
+IoU metric: bbox
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.026
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.036
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.028
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.027
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.021
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.044
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.034
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.287
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.491
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.355
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.460
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.587
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.590
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.527
+best_stat: {'epoch': 13, 'coco_eval_bbox': 0.0262194063483029}
+/home/xdota/rt_dert_v4_learn/RT-DETRv4/engine/solver/det_engine.py:145: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  if not math.isfinite(loss_value):
+Epoch: [14]  [   0/4335]  eta: 12:59:35  lr: 0.000010  loss: 22.9677 (22.9677)  loss_vfl: 0.4973 (0.4973)  loss_bbox: 0.0260 (0.0260)  loss_giou: 0.2838 (0.2838)  loss_fgl: 0.7768 (0.7768)  loss_vfl_aux_0: 0.5601 (0.5601)  loss_bbox_aux_0: 0.0352 (0.0352)  loss_giou_aux_0: 0.3450 (0.3450)  loss_fgl_aux_0: 0.8518 (0.8518)  loss_ddf_aux_0: 0.3038 (0.3038)  loss_vfl_aux_1: 0.5383 (0.5383)  loss_bbox_aux_1: 0.0264 (0.0264)  loss_giou_aux_1: 0.2961 (0.2961)  loss_fgl_aux_1: 0.7818 (0.7818)  loss_ddf_aux_1: 0.0607 (0.0607)  loss_vfl_aux_2: 0.5321 (0.5321)  loss_bbox_aux_2: 0.0261 (0.0261)  loss_giou_aux_2: 0.2863 (0.2863)  loss_fgl_aux_2: 0.7782 (0.7782)  loss_ddf_aux_2: 0.0165 (0.0165)  loss_vfl_aux_3: 0.5089 (0.5089)  loss_bbox_aux_3: 0.0260 (0.0260)  loss_giou_aux_3: 0.2838 (0.2838)  loss_fgl_aux_3: 0.7771 (0.7771)  loss_ddf_aux_3: 0.0012 (0.0012)  loss_vfl_aux_4: 0.5014 (0.5014)  loss_bbox_aux_4: 0.0260 (0.0260)  loss_giou_aux_4: 0.2838 (0.2838)  loss_fgl_aux_4: 0.7768 (0.7768)  loss_ddf_aux_4: 0.0001 (0.0001)  loss_vfl_pre: 0.5586 (0.5586)  loss_bbox_pre: 0.0352 (0.0352)  loss_giou_pre: 0.3458 (0.3458)  loss_vfl_enc_0: 0.5635 (0.5635)  loss_bbox_enc_0: 0.0797 (0.0797)  loss_giou_enc_0: 0.4797 (0.4797)  loss_vfl_dn_0: 0.4457 (0.4457)  loss_bbox_dn_0: 0.0699 (0.0699)  loss_giou_dn_0: 0.3602 (0.3602)  loss_fgl_dn_0: 1.0502 (1.0502)  loss_ddf_dn_0: 0.9633 (0.9633)  loss_vfl_dn_1: 0.3592 (0.3592)  loss_bbox_dn_1: 0.0286 (0.0286)  loss_giou_dn_1: 0.2278 (0.2278)  loss_fgl_dn_1: 0.7984 (0.7984)  loss_ddf_dn_1: 0.1299 (0.1299)  loss_vfl_dn_2: 0.3458 (0.3458)  loss_bbox_dn_2: 0.0240 (0.0240)  loss_giou_dn_2: 0.2098 (0.2098)  loss_fgl_dn_2: 0.7839 (0.7839)  loss_ddf_dn_2: 0.0378 (0.0378)  loss_vfl_dn_3: 0.3135 (0.3135)  loss_bbox_dn_3: 0.0234 (0.0234)  loss_giou_dn_3: 0.2063 (0.2063)  loss_fgl_dn_3: 0.7821 (0.7821)  loss_ddf_dn_3: 0.0026 (0.0026)  loss_vfl_dn_4: 0.3075 (0.3075)  loss_bbox_dn_4: 0.0231 (0.0231)  loss_giou_dn_4: 0.2059 (0.2059)  loss_fgl_dn_4: 0.7810 (0.7810)  loss_ddf_dn_4: 0.0001 (0.0001)  loss_vfl_dn_5: 0.3076 (0.3076)  loss_bbox_dn_5: 0.0231 (0.0231)  loss_giou_dn_5: 0.2062 (0.2062)  loss_fgl_dn_5: 0.7804 (0.7804)  loss_vfl_dn_pre: 0.4470 (0.4470)  loss_bbox_dn_pre: 0.0869 (0.0869)  loss_giou_dn_pre: 0.3663 (0.3663)  time: 10.7902  data: 3.1209  max mem: 16276
+Traceback (most recent call last):
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/train.py", line 84, in <module>
+    main(args)
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/train.py", line 54, in main
+    solver.fit()
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/engine/solver/det_solver.py", line 77, in fit
+    train_stats, grad_percentages = train_one_epoch(
+                                    ^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/engine/solver/det_engine.py", line 112, in train_one_epoch
+    outputs = model(samples, targets=targets,
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/engine/rtv4/rtv4.py", line 39, in forward
+    x_decoder_out = self.decoder(x_fpn_features, targets)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/engine/rtv4/dfine_decoder.py", line 712, in forward
+    get_contrastive_denoising_training_group(targets, \
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/engine/rtv4/denoising.py", line 56, in get_contrastive_denoising_training_group
+    dn_positive_idx = torch.nonzero(positive_gt_mask)[:, 1]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+wandb: updating run metadata
+wandb: uploading output.log; uploading wandb-summary.json; uploading config.yaml
+wandb: ERROR Control-C detected -- Run data was not synced
+Exception ignored in atexit callback: <bound method WandbWriter.close of <engine.misc.wandb_writer.WandbWriter object at 0x76ecfa25e270>>
+Traceback (most recent call last):
+  File "/home/xdota/rt_dert_v4_learn/RT-DETRv4/engine/misc/wandb_writer.py", line 79, in close
+    self._wandb_run.finish()
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 411, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 456, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 2309, in finish
+    return self._finish(exit_code)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 411, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 2337, in _finish
+    self._atexit_cleanup(exit_code=exit_code)
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 2531, in _atexit_cleanup
+    self._on_finish()
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 2748, in _on_finish
+    wait_with_progress(
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/mailbox/wait_with_progress.py", line 24, in wait_with_progress
+    return wait_all_with_progress(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/mailbox/wait_with_progress.py", line 78, in wait_all_with_progress
+    return asyncer.run(progress_loop_with_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 137, in run
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 451, in result
+    self._condition.wait(timeout)
+  File "/usr/lib/python3.12/threading.py", line 355, in wait
+    waiter.acquire()
+KeyboardInterrupt: 
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mrtv4_l_doclaynet_run1[0m at: [34mhttps://wandb.ai/xdotawinx-itmo/rt-detrv4-doclaynet/runs/y7meparq[0m
+Exception ignored in atexit callback: <function _start_and_connect_service.<locals>.teardown_atexit at 0x76eaea883ec0>
+Traceback (most recent call last):
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/lib/service/service_connection.py", line 73, in teardown_atexit
+    conn.teardown(hooks.exit_code)
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/lib/service/service_connection.py", line 377, in teardown
+    return self._proc.join()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/xdota/rt_dert_v4_learn/venv/lib/python3.12/site-packages/wandb/sdk/lib/service/service_process.py", line 103, in join
+    return self._process.wait()
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 1264, in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 2053, in _wait
+    (pid, sts) = self._try_wait(0)
+                 ^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 2011, in _try_wait
+    (pid, sts) = os.waitpid(self.pid, wait_flags)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt: 
