@@ -6,14 +6,14 @@ __include__: [
   '../base/dfine_hgnetv2.yml',
 ]
 
-output_dir: /content/drive/MyDrive/colab_outputs/rtdetrv4/rtv4_m_doclaynet_50e
+output_dir: /content/drive/MyDrive/colab_outputs/rtdetrv4/rtv4_m_doclaynet_70e_dinov2
 
 # ------------------------------------------
 # Logging
 # ------------------------------------------
-use_wandb: False
+use_wandb: True
 wandb_project: rt-detrv4-doclaynet
-wandb_name: rtv4_m_doclaynet_50e_dinov2_colab
+wandb_name: rtv4_m_doclaynet_70e_dinov2
 
 # ------------------------------------------
 # Model
@@ -88,44 +88,41 @@ optimizer:
 # ------------------------------------------
 # Schedule
 # ------------------------------------------
-epoches: 50
-flat_epoch: 25
-no_aug_epoch: 10
+epoches: 70
+flat_epoch: 35
+no_aug_epoch: 14
 
 use_amp: True
 
 # ------------------------------------------
 # Train dataloader
+# Layout-friendly augmentations:
+# - weaker photometric distortion
+# - keep zoom-out
+# - remove IoUCrop, HorizontalFlip, Mosaic, MixUp
 # ------------------------------------------
 train_dataloader:
-  total_batch_size: 16
-  num_workers: 4
+  total_batch_size: 32
+  num_workers: 6
   persistent_workers: True
   dataset:
     transforms:
       ops:
-        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomPhotometricDistort, p: 0.2}
         - {type: RandomZoomOut, fill: 0}
-        - {type: RandomIoUCrop, p: 0.8}
         - {type: SanitizeBoundingBoxes, min_size: 1}
-        - {type: RandomHorizontalFlip}
         - {type: Resize, size: [640, 640]}
         - {type: SanitizeBoundingBoxes, min_size: 1}
         - {type: ConvertPILImage, dtype: 'float32', scale: True}
         - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
-      policy:
-        epoch: [10, 25, 40]
-        ops: ['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']
-      mosaic_prob: 0.5
   collate_fn:
     base_size: 640
-    mixup_epochs: [10, 25]
-    stop_epoch: 40
+    stop_epoch: 56
 
 # ------------------------------------------
 # Val dataloader
 # ------------------------------------------
 val_dataloader:
-  total_batch_size: 8
+  total_batch_size: 16
   num_workers: 4
   persistent_workers: True
