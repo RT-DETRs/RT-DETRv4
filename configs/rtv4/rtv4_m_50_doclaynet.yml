@@ -54,7 +54,7 @@ teacher_model:
 # ------------------------------------------
 # Distillation / eval
 # ------------------------------------------
-eval_spatial_size: [640, 640]
+eval_spatial_size: [896, 896]
 
 RTv4Criterion:
   weight_dict:
@@ -102,8 +102,8 @@ use_amp: True
 # - remove IoUCrop, HorizontalFlip, Mosaic, MixUp
 # ------------------------------------------
 train_dataloader:
-  total_batch_size: 32
-  num_workers: 6
+  total_batch_size: 24
+  num_workers: 8
   persistent_workers: True
   dataset:
     transforms:
@@ -111,18 +111,21 @@ train_dataloader:
         - {type: RandomPhotometricDistort, p: 0.2}
         - {type: RandomZoomOut, fill: 0}
         - {type: SanitizeBoundingBoxes, min_size: 1}
-        - {type: Resize, size: [640, 640]}
+        - {type: Resize, size: [896, 896]}
         - {type: SanitizeBoundingBoxes, min_size: 1}
         - {type: ConvertPILImage, dtype: 'float32', scale: True}
         - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy: ~
+      scales: [896]
   collate_fn:
-    base_size: 640
+    base_size: 896
+    base_size_repeat: 1
     stop_epoch: 56
 
 # ------------------------------------------
 # Val dataloader
 # ------------------------------------------
 val_dataloader:
-  total_batch_size: 16
-  num_workers: 4
+  total_batch_size: 8
+  num_workers: 6
   persistent_workers: True
