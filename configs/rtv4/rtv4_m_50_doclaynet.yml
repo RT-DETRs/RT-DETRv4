@@ -6,16 +6,18 @@ __include__: [
   '../base/dfine_hgnetv2.yml',
 ]
 
-output_dir: ./output/rtv4_m_doclaynet_50e
+output_dir: /content/drive/MyDrive/colab_outputs/rtdetrv4/rtv4_m_doclaynet_50e
 
-# Weights & Biases logging
-use_wandb: True
+# ------------------------------------------
+# Logging
+# ------------------------------------------
+use_wandb: False
 wandb_project: rt-detrv4-doclaynet
-wandb_name: rtv4_m_doclaynet_50e
+wandb_name: rtv4_m_doclaynet_50e_dinov2_colab
 
-# ==========================================
-# НАСТРОЙКИ M-МОДЕЛИ (Medium)
-# ==========================================
+# ------------------------------------------
+# Model
+# ------------------------------------------
 RTv4:
   backbone: HGNetv2
 
@@ -36,10 +38,36 @@ HybridEncoder:
   hidden_dim: 256
   depth_mult: 0.67
 
-# Оценка при том же разрешении, что и обучение
+# ------------------------------------------
+# Teacher model: DINOv2
+# ------------------------------------------
+teacher_model:
+  type: "DINOv2TeacherModel"
+  dinov2_repo_path: /content/dinov2
+  model_name: dinov2_vitl14_reg
+  weights_path: /content/RT-DETRv4/pretrain/dinov2_vitl14_reg4_pretrain.pth
+  patch_size: 14
+  target_downsample_factor: 32
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+# ------------------------------------------
+# Distillation / eval
+# ------------------------------------------
 eval_spatial_size: [640, 640]
 
-# Оптимизатор (адаптирован под M-модель)
+RTv4Criterion:
+  weight_dict:
+    loss_distill: 10.0
+  distill_adaptive_params:
+    enabled: True
+    rho: 3.5
+    delta: 0.5
+    default_weight: 10.0
+
+# ------------------------------------------
+# Optimizer
+# ------------------------------------------
 optimizer:
   type: AdamW
   params:
@@ -57,21 +85,21 @@ optimizer:
   betas: [0.9, 0.999]
   weight_decay: 0.0001
 
-# ==========================================
-# РАСПИСАНИЕ НА 50 ЭПОХ
-# ==========================================
+# ------------------------------------------
+# Schedule
+# ------------------------------------------
 epoches: 50
-flat_epoch: 25      # epoches // 2
-no_aug_epoch: 10    # последние 10 эпох без тяжелых аугментаций
+flat_epoch: 25
+no_aug_epoch: 10
 
 use_amp: True
 
-# ==========================================
-# DATALOADER ОБУЧЕНИЯ
-# ==========================================
+# ------------------------------------------
+# Train dataloader
+# ------------------------------------------
 train_dataloader:
-  total_batch_size: 12  # Модель M легче, батч 16 должен уверенно поместиться в 16 ГБ
-  num_workers: 8
+  total_batch_size: 16
+  num_workers: 4
   persistent_workers: True
   dataset:
     transforms:
@@ -86,17 +114,18 @@ train_dataloader:
         - {type: ConvertPILImage, dtype: 'float32', scale: True}
         - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
       policy:
-        epoch: [10, 25, 40]   # Точки изменения аугментаций отмасштабированы на 50 эпох
+        epoch: [10, 25, 40]
         ops: ['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']
       mosaic_prob: 0.5
   collate_fn:
     base_size: 640
-    mixup_epochs: [10, 25]  # Масштаб MixUp
-    stop_epoch: 40          # Строго epoches - no_aug_epoch (50 - 10 = 40)
+    mixup_epochs: [10, 25]
+    stop_epoch: 40
 
-# ==========================================
-# DATALOADER ВАЛИДАЦИИ (ЗАЩИТА ОТ OOM)
-# ==========================================
+# ------------------------------------------
+# Val dataloader
+# ------------------------------------------
 val_dataloader:
-  total_batch_size: 4       # ВАЖНО: Сниженный батч для безопасной валидации без падений WSL!
-  num_workers: 8
+  total_batch_size: 8
+  num_workers: 4
+  persistent_workers: True
