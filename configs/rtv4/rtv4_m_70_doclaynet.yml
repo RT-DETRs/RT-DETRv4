@@ -102,7 +102,7 @@ use_amp: True
 # - remove IoUCrop, HorizontalFlip, Mosaic, MixUp
 # ------------------------------------------
 train_dataloader:
-  total_batch_size: 24
+  total_batch_size: 32
   num_workers: 8
   persistent_workers: True
   dataset:
@@ -116,7 +116,6 @@ train_dataloader:
         - {type: ConvertPILImage, dtype: 'float32', scale: True}
         - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
       policy: ~
-      scales: [896]
   collate_fn:
     base_size: 896
     base_size_repeat: 1
@@ -126,6 +125,11 @@ train_dataloader:
 # Val dataloader
 # ------------------------------------------
 val_dataloader:
-  total_batch_size: 8
+  total_batch_size: 16
   num_workers: 6
   persistent_workers: True
+  dataset:
+    transforms:
+      ops:
+        - {type: Resize, size: [896, 896]}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
