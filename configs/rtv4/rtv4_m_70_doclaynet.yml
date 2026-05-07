@@ -6,6 +6,7 @@ __include__: [
   '../base/dfine_hgnetv2.yml',
 ]
 
+checkpoint_freq: 3
 output_dir: /content/drive/MyDrive/colab_outputs/rtdetrv4/rtv4_m_doclaynet_70e_dinov2
 
 # ------------------------------------------
