@@ -103,7 +103,7 @@ use_amp: True
 # - remove IoUCrop, HorizontalFlip, Mosaic, MixUp
 # ------------------------------------------
 train_dataloader:
-  total_batch_size: 32
+  total_batch_size: 40
   num_workers: 8
   persistent_workers: True
   dataset:
