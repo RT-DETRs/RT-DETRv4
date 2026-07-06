@@ -13,13 +13,16 @@ def stats(
     base_size = cfg.train_dataloader.collate_fn.base_size
     input_shape = (1, 3, base_size, base_size)
 
-    model_for_info = copy.deepcopy(cfg.model).deploy()
+    model_for_info = copy.deepcopy(cfg.model).deploy().cpu()
 
-    flops, macs, _ = calculate_flops(model=model_for_info,
-                                        input_shape=input_shape,
-                                        output_as_string=True,
-                                        output_precision=4,
-                                        print_detailed=False)
+    try:
+        flops, macs, _ = calculate_flops(model=model_for_info,
+                                            input_shape=input_shape,
+                                            output_as_string=True,
+                                            output_precision=4,
+                                            print_detailed=False)
+    except Exception:
+        flops, macs = "N/A", "N/A"
     params = sum(p.numel() for p in model_for_info.parameters())
     del model_for_info
 
