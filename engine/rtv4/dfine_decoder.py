@@ -706,7 +706,7 @@ class DFINETransformer(nn.Module):
 
         return topk_memory, topk_logits, topk_anchors
 
-    def forward(self, feats, targets=None):
+    def forward(self, feats, targets=None, spatial_prior=None, use_spatial_prior=None):
         # input projection and embedding
         memory, spatial_shapes = self._get_encoder_input(feats)
 
@@ -726,6 +726,20 @@ class DFINETransformer(nn.Module):
 
         init_ref_contents, init_ref_points_unact, enc_topk_bboxes_list, enc_topk_logits_list = \
             self._get_decoder_input(memory, spatial_shapes, denoising_logits, denoising_bbox_unact)
+
+        # --- SPATIAL PRIOR INJECTION ---
+        # Override query slot 299 (weakest encoder-selected query) with the
+        # externally provided [cx, cy, w, h] spatial prior.
+        # init_ref_points_unact is in inverse-sigmoid space, so we convert
+        # the [0,1]-normalised prior accordingly.
+        PRIOR_SLOT = self.num_queries - 1  # slot 299
+        if spatial_prior is not None and use_spatial_prior is not None:
+            prior_clamped = spatial_prior.clamp(1e-6, 1.0 - 1e-6)
+            prior_unact = torch.log(prior_clamped / (1.0 - prior_clamped))
+            init_ref_points_unact = init_ref_points_unact.clone()
+            mask = use_spatial_prior.to(dtype=init_ref_points_unact.dtype).unsqueeze(-1)  # [1, 1]
+            original = init_ref_points_unact[:, PRIOR_SLOT, :]
+            init_ref_points_unact[:, PRIOR_SLOT, :] = original * (1.0 - mask) + prior_unact * mask
 
         # decoder
         out_bboxes, out_logits, out_corners, out_refs, pre_bboxes, pre_logits = self.decoder(
