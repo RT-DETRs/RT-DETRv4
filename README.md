@@ -49,6 +49,19 @@ https://github.com/user-attachments/assets/e610b13b-a6bb-420b-ac6f-a752f61d0d84
 
 </details>
 
+<details open>
+<summary> 🚁 Demo: VisDrone (aerial imagery) </summary>
+
+**RT-DETRv4-L** fine-tuned on VisDrone at 960×960 with DINOv3 distillation, running on two VisDrone2019-VID val sequences: night (left) and day (right). Dense, tiny targets (pedestrians, cars, vans, trucks, tricycles) seen from a drone. Fine-tuned S/M/L weights and full training/evaluation commands are in [Usage → VisDrone](#2-usage).
+
+<p align="center">
+  <img src="./figures/visdrone_demo.gif" alt="RT-DETRv4-L detections on VisDrone aerial footage, night (left) and day (right)" width="90%">
+</p>
+
+<sub>4 s excerpt at 30 fps; here is the [full-length video](https://huggingface.co/dronefreak/visdrone-rtdetrv4-l/resolve/main/assets/demo_banner.mp4). Detections at confidence ≥ 0.35. For illustration only; not part of the reported metrics.</sub>
+
+</details>
+
 ## ⚡ Performance
 
 RT-DETRv4 achieves new state-of-the-art results on the COCO dataset, outperforming previous real-time detectors.
@@ -255,6 +268,55 @@ Update the `dinov3_repo_path` and `dinov3_weights_path` to match your local setu
 </details>
 
 <details>
+<summary> VisDrone (aerial imagery, 960×960) </summary>
+
+RT-DETRv4 S/M/L fine-tuned from the COCO checkpoints on VisDrone2019-DET, with DINOv3 distillation at 960×960. Weights, configs and full model cards are on Hugging Face.
+
+| Model | AP | AP50 | Params | FLOPs (960²) | Config | Weights |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| RT-DETRv4-S | 27.4 | 46.3 | 10.4M | 52.5B | [yml](./configs/rtv4/rtv4_hgnetv2_s_visdrone_960.yml) | [🤗 HF](https://huggingface.co/dronefreak/visdrone-rtdetrv4-s) |
+| RT-DETRv4-M | 27.8 | 46.9 | 19.4M | 122.4B | [yml](./configs/rtv4/rtv4_hgnetv2_m_visdrone_960.yml) | [🤗 HF](https://huggingface.co/dronefreak/visdrone-rtdetrv4-m) |
+| RT-DETRv4-L | 28.9 | 48.3 | 30.9M | 197.5B | [yml](./configs/rtv4/rtv4_hgnetv2_l_visdrone_960.yml) | [🤗 HF](https://huggingface.co/dronefreak/visdrone-rtdetrv4-l) |
+
+<sub>COCO-style AP on the VisDrone2019-DET **test** split (1610 images), EMA weights, ≤100 detections per image; the `valid` split is used for checkpoint selection. VisDrone is released for non-commercial research (CC BY-NC-SA 3.0). The models are distilled from DINOv3, whose license is included in each Hugging Face repo.</sub>
+
+**Configs.** `rtv4_hgnetv2_${model}_visdrone_960.yml` (recommended, used for the released weights) is 960×960 with DINOv3 distillation; it includes `rtv4_hgnetv2_${model}_visdrone.yml`, the 640×640 baseline without distillation. `${model}` is `s`, `m` or `l` (`x` configs are provided, but there is no released X checkpoint).
+
+**Data.** The configs expect a COCO-format VisDrone export: `train/`, `valid/` and `test/`, each with the images and an `_annotations.coco.json`, 11 classes with ids 0-10 (pedestrian, people, bicycle, car, van, truck, tricycle, awning-tricycle, bus, motor, others). The `img_folder` / `ann_file` paths in `configs/rtv4/rtv4_hgnetv2_${model}_visdrone.yml` are the original author's machine paths; edit them for your setup.
+
+**DINOv3 teacher.** The `_960` configs distill from DINOv3, so set up the teacher first (see [Teacher Model Preparation](#teacher-model-preparation)). It is needed for training and, since the solver builds it from the config, also for `--test-only`. Inference and ONNX export with the released weights do not need it.
+
+1.  Training (fine-tune from the COCO checkpoint of the same size, `${MODEL}` is `S`, `M` or `L`)
+
+    ```shell
+    CUDA_VISIBLE_DEVICES=0,1,2 torchrun --master_port=7777 --nproc_per_node=3 train.py -c configs/rtv4/rtv4_hgnetv2_${model}_visdrone_960.yml --use-amp --seed=0 -t RTv4-${MODEL}-hgnet.pth
+    ```
+
+2.  Testing (COCO metrics on the test split; the config's `val_dataloader` points at `valid`, so override it)
+
+    ```shell
+    CUDA_VISIBLE_DEVICES=0 torchrun --master_port=7777 --nproc_per_node=1 train.py -c configs/rtv4/rtv4_hgnetv2_${model}_visdrone_960.yml --test-only -r outputs/rtv4_hgnetv2_${model}_visdrone_960/best_stg2.pth -u val_dataloader.dataset.img_folder=/path/to/VisDrone/COCO/test val_dataloader.dataset.ann_file=/path/to/VisDrone/COCO/test/_annotations.coco.json
+    ```
+
+3.  Evaluation report (per-class AP, precision/recall, PR/F1/confusion plots, params/FLOPs, demo images/video, and a Hugging Face model card for each model)
+
+    ```shell
+    pip install -r tools/model_card/requirements.txt
+    python tools/model_card/generate_model_card.py --manifest tools/model_card/manifests/visdrone.yml
+    ```
+
+    Edit the `eval` paths (and optional `banner` clips) in the manifest first. Output goes to `model_cards/` (git-ignored).
+
+4.  Inference with the released weights
+
+    ```shell
+    hf download dronefreak/visdrone-rtdetrv4-${model} --local-dir weights/visdrone-${model}
+    python tools/inference/torch_inf.py -c weights/visdrone-${model}/config.yaml -r weights/visdrone-${model}/model.pth --input image.jpg --device cuda:0
+    ```
+
+</details>
+
+<details>
 <summary> Customizing Batch Size </summary>
 
 For example, if you want to double the total batch size when training RT-DETRv4-L on COCO2017, here are the steps you should follow:
@@ -332,7 +394,7 @@ If you'd like to train **RT-DETRv4** on COCO2017 with an input size of 320x320, 
 1.  Setup
 
     ```shell
-    pip install onnx onnxsim
+    pip install onnx onnxsim onnxscript
     ```
 
 2.  Export onnx
@@ -344,8 +406,14 @@ If you'd like to train **RT-DETRv4** on COCO2017 with an input size of 320x320, 
 3.  Export [tensorrt](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html)
 
     ```shell
-    trtexec --onnx="model.onnx" --saveEngine="model.engine" --fp16
+    trtexec --onnx="model.onnx" --saveEngine="model.engine"
     ```
+
+    > **Note:** On TensorRT 10.x/11.x, `trtexec` builds strongly-typed networks by
+    > default and no longer accepts the `--fp16` builder flag (`Unknown option: --fp16`).
+    > Precision now follows the types declared in the ONNX graph itself; drop the flag
+    > as shown above. If you're on an older TensorRT release that still uses the
+    > weakly-typed builder, `--fp16` is still valid there.
 
 </details>
 

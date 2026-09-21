@@ -1,0 +1,86 @@
+__include__: ['./rtv4_hgnetv2_x_visdrone.yml']
+
+# ---------------------------------------------------------------------------
+# RT-DETRv4-X on VisDrone @ 960x960 WITH DINOv3 ViT-B/16 feature distillation.
+# Same rationale as rtv4_hgnetv2_l_visdrone_960.yml.
+#
+# NOT part of NODA / company work -- gitignored, not tracked.
+#
+# 960x960 was smoke-tested (2 epochs, 64/32-image subset, 1 GPU, local batch
+# 4/8) and ran clean at 18.4 GB peak -- the closest to the 24 GB ceiling of
+# all four sizes. That did NOT exercise Mosaic/multiscale (policy kicks in at
+# epoch 4+). S hit a recurring DDP/NCCL hang during real training at a much
+# lighter per-GPU batch than X's (one rank spinning on a collective, others
+# blocked in futex_do_wait), once multiscale started sampling up to 1.25x
+# base_size -- almost certainly memory pressure. total_batch_size below is
+# now pinned at 6 (2/GPU) -- notably, the earlier value of 12 here was
+# already a latent bug: it doubled X's own baseline batch (6, see
+# rtv4_hgnetv2_x_visdrone.yml) without rescaling lr to match. Fixed by
+# reverting to 6, which lines up with the already-correct baseline lr below.
+# X is the biggest variant, so still worth watching nvidia-smi on the first
+# real run despite the large margin the smoke test suggests.
+# ---------------------------------------------------------------------------
+
+output_dir: ./outputs/rtv4_hgnetv2_x_visdrone_960
+
+eval_spatial_size: [960, 960]     # drives the precomputed encoder pos-embed
+
+teacher_model:
+  type: "DINOv3TeacherModel"
+  dinov3_repo_path: dinov3/
+  dinov3_weights_path: pretrain/dinov3_vitb16_pretrain_lvd1689m.pth
+  dinov3_model_type: dinov3_vitb16
+  patch_size: 16
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+HybridEncoder:
+  distill_teacher_dim: 768         # ViT-B/16 embed dim
+
+RTv4Criterion:
+  losses: ['mal', 'boxes', 'local', 'distill']
+  weight_dict: {loss_mal: 1, loss_bbox: 5, loss_giou: 2, loss_fgl: 0.15, loss_ddf: 1.5, loss_distill: 20}
+  distill_adaptive_params:            # X-specific values from rtv4_hgnetv2_x_coco.yml
+    enabled: True
+    rho: 2
+    delta: 0.25
+    default_weight: 20
+
+train_dataloader:
+  dataset:
+    transforms:
+      ops:
+        - {type: Mosaic, output_size: 384, rotation_range: 10, translation_range: [0.1, 0.1], scaling_range: [0.5, 1.5],
+           probability: 1.0, fill_value: 0, use_cache: False, max_cached_images: 50, random_pop: True}
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [960, 960], }
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        epoch: [4, 29, 50]
+  collate_fn:
+    base_size: 960
+    base_size_repeat: 3           # matches X's own COCO recipe
+    mixup_epochs: [4, 29]
+    stop_epoch: 50
+  total_batch_size: 6              # 2 per GPU x 3 -- fixed from a mismatched 12, see note above
+  num_workers: 4
+
+val_dataloader:
+  dataset:
+    transforms:
+      ops:
+        - {type: Resize, size: [960, 960], }
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+  total_batch_size: 6
+  num_workers: 4
+
+# schedule + LR inherited from rtv4_hgnetv2_x_visdrone.yml (unchanged, and
+# already correct for bs6 -- no rescale needed here, unlike S/M/L):
+#   epoches 58, flat_epoch 29, no_aug_epoch 8, warmup_iter 2000
+#   lr 0.0001 / backbone 0.000001  (linear scale of COCO's bs32/lr5e-4 to bs6)

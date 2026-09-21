@@ -33,13 +33,13 @@ def draw(images, labels, boxes, scores, thrh=0.4):
         im.save('torch_results.jpg')
 
 
-def process_image(model, device, file_path):
+def process_image(model, device, file_path, size):
     im_pil = Image.open(file_path).convert('RGB')
     w, h = im_pil.size
     orig_size = torch.tensor([[w, h]]).to(device)
 
     transforms = T.Compose([
-        T.Resize((640, 640)),
+        T.Resize(size),
         T.ToTensor(),
     ])
     im_data = transforms(im_pil).unsqueeze(0).to(device)
@@ -50,7 +50,7 @@ def process_image(model, device, file_path):
     draw([im_pil], labels, boxes, scores)
 
 
-def process_video(model, device, file_path):
+def process_video(model, device, file_path, size):
     cap = cv2.VideoCapture(file_path)
 
     # Get video properties
@@ -63,7 +63,7 @@ def process_video(model, device, file_path):
     out = cv2.VideoWriter('torch_results.mp4', fourcc, fps, (orig_w, orig_h))
 
     transforms = T.Compose([
-        T.Resize((640, 640)),
+        T.Resize(size),
         T.ToTensor(),
     ])
 
@@ -100,7 +100,7 @@ def process_video(model, device, file_path):
 
     cap.release()
     out.release()
-    print("Video processing complete. Result saved as 'results_video.mp4'.")
+    print("Video processing complete. Result saved as 'torch_results.mp4'.")
 
 
 def main(args):
@@ -133,6 +133,9 @@ def main(args):
             outputs = self.postprocessor(outputs, orig_target_sizes)
             return outputs
 
+    # (height, width) the model was built/evaluated at; 640 for the stock COCO configs
+    size = tuple(int(s) for s in cfg.yaml_cfg.get('eval_spatial_size') or [640, 640])
+
     device = args.device
     model = Model().to(device)
 
@@ -140,11 +143,11 @@ def main(args):
     file_path = args.input
     if os.path.splitext(file_path)[-1].lower() in ['.jpg', '.jpeg', '.png', '.bmp']:
         # Process as image
-        process_image(model, device, file_path)
+        process_image(model, device, file_path, size)
         print("Image processing complete.")
     else:
         # Process as video
-        process_video(model, device, file_path)
+        process_video(model, device, file_path, size)
 
 
 if __name__ == '__main__':

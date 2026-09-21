@@ -1,0 +1,109 @@
+__include__: ['./rtv4_hgnetv2_s_visdrone.yml']
+
+# ---------------------------------------------------------------------------
+# RT-DETRv4-S on VisDrone @ 960x960 WITH DINOv3 ViT-B/16 feature distillation.
+# Recommended config. Rationale: VisDrone is aerial/drone footage (native
+# ~960x540-1920x1080) dominated by small, dense objects (distant pedestrians,
+# cars, motorbikes); 960 matches native width and recovers small-object
+# recall further than 768/640, and distillation is RT-DETRv4's core
+# contribution over D-FINE.
+#
+# NOT part of NODA / company work -- gitignored, not tracked.
+#
+# 960x960 was smoke-tested (2 epochs, 64/32-image subset, 1 GPU, local batch
+# 4/8) and ran clean at 8.7 GB peak -- but that did NOT exercise
+# Mosaic/multiscale (policy kicks in at epoch 4+), and a real 3-GPU run at
+# the original total_batch_size: 24 (8/GPU) hit a recurring DDP/NCCL hang
+# (one rank spinning on a collective, others blocked in futex_do_wait) a few
+# epochs in, once multiscale started sampling up to ~1200x1200 -- almost
+# certainly memory pressure (one GPU was observed at 98% used). Dropped to
+# 6 (2/GPU) with lr rescaled to match; leaves a large safety margin even at
+# the top of the multiscale range.
+#
+# Requires (already set up in this checkout):
+#   - dinov3/ repo cloned at repo root
+#   - pretrain/dinov3_vitb16_pretrain_lvd1689m.pth  (ViT-B/16 LVD-1689M)
+#   - pip deps: ftfy termcolor submitit  (+ dinov3/requirements.txt)
+#
+# Launch:
+#   CUDA_VISIBLE_DEVICES=0,1,2 torchrun --master_port=7777 --nproc_per_node=3 \
+#     train.py -c configs/rtv4/rtv4_hgnetv2_s_visdrone_960.yml --use-amp --seed=0 \
+#     -t RTv4-S-hgnet.pth
+# ---------------------------------------------------------------------------
+
+output_dir: ./outputs/rtv4_hgnetv2_s_visdrone_960
+
+eval_spatial_size: [960, 960]     # drives the precomputed encoder pos-embed
+
+teacher_model:
+  type: "DINOv3TeacherModel"
+  dinov3_repo_path: dinov3/
+  dinov3_weights_path: pretrain/dinov3_vitb16_pretrain_lvd1689m.pth
+  dinov3_model_type: dinov3_vitb16
+  patch_size: 16
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+HybridEncoder:
+  distill_teacher_dim: 768         # ViT-B/16 embed dim
+
+RTv4Criterion:
+  losses: ['mal', 'boxes', 'local', 'distill']
+  weight_dict: {loss_mal: 1, loss_bbox: 5, loss_giou: 2, loss_fgl: 0.15, loss_ddf: 1.5, loss_distill: 5}
+  distill_adaptive_params:            # S-specific values from rtv4_hgnetv2_s_coco.yml
+    enabled: True
+    rho: 11
+    delta: 1
+    default_weight: 20
+
+train_dataloader:
+  dataset:
+    transforms:
+      ops:
+        - {type: Mosaic, output_size: 384, rotation_range: 10, translation_range: [0.1, 0.1], scaling_range: [0.5, 1.5],
+           probability: 1.0, fill_value: 0, use_cache: False, max_cached_images: 50, random_pop: True}
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [960, 960], }
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        epoch: [4, 64, 120]
+  collate_fn:
+    base_size: 960
+    base_size_repeat: 20          # matches S's own COCO recipe (heavily weights the canonical size)
+    mixup_epochs: [4, 64]
+    stop_epoch: 120
+  total_batch_size: 6             # 2 per GPU x 3 -- lowered from 24 after a real hang, see note above
+  num_workers: 4
+
+val_dataloader:
+  dataset:
+    transforms:
+      ops:
+        - {type: Resize, size: [960, 960], }
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+  total_batch_size: 6
+  num_workers: 4
+
+# LR rescaled for total_batch_size=6 (was 0.0003/0.00015 at bs24; linear
+# scale of COCO's bs32/lr4e-4 head, bs32/lr2e-4 backbone). Epoch schedule
+# (epoches 132, flat_epoch 64, no_aug_epoch 12, warmup_iter 2000) is
+# inherited UNCHANGED from rtv4_hgnetv2_s_visdrone.yml -- a smaller batch
+# just means more gradient steps per epoch, no epoch-count change needed.
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*bn).*$'
+      lr: 0.0000375
+    -
+      params: '^(?=.*(?:norm|bn)).*$'
+      weight_decay: 0.
+  lr: 0.000075
+  betas: [0.9, 0.999]
+  weight_decay: 0.0001

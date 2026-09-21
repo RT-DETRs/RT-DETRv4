@@ -1,0 +1,83 @@
+__include__: [
+  '../dfine/dfine_hgnetv2_l_coco.yml',
+  '../base/rtv4.yml'
+]
+
+# ---------------------------------------------------------------------------
+# RT-DETRv4-L on VisDrone (COCO-format export). 640px baseline, no
+# distillation. See rtv4_hgnetv2_l_visdrone_960.yml for the recommended
+# 960px + DINOv3 distillation variant.
+#
+# NOT part of NODA / company work -- gitignored, not tracked.
+#
+# Launch (3x GPU, finetune from the COCO checkpoint):
+#   CUDA_VISIBLE_DEVICES=0,1,2 torchrun --master_port=7777 --nproc_per_node=3 \
+#     train.py -c configs/rtv4/rtv4_hgnetv2_l_visdrone.yml --use-amp --seed=0 \
+#     -t RTv4-L-hgnet.pth
+#
+#   -t loads backbone/encoder/decoder from RTv4-L-hgnet.pth and skips the
+#   80-class COCO score heads (VisDrone has 11 classes); it also sets
+#   HGNetv2.pretrained=False automatically.
+# ---------------------------------------------------------------------------
+
+output_dir: ./outputs/rtv4_hgnetv2_l_visdrone
+
+num_classes: 11            # VisDrone (Roboflow COCO export): pedestrian, people, bicycle,
+remap_mscoco_category: False   # car, van, truck, tricycle, awning-tricycle, bus, motor, others (ids 0..10)
+
+HGNetv2:
+  name: 'B4'
+  return_idx: [1, 2, 3]
+  freeze_stem_only: True
+  freeze_at: 0
+  freeze_norm: True
+
+HybridEncoder:
+  distill_teacher_dim: 0   # disable the student distillation projector (no teacher)
+
+RTv4Criterion:
+  losses: ['mal', 'boxes', 'local']   # drop 'distill' (no teacher)
+
+train_dataloader:
+  dataset:
+    type: CocoDetection
+    img_folder: /media/local/data/detection-datasets/VisDrone/COCO/train
+    ann_file: /media/local/data/detection-datasets/VisDrone/COCO/train/_annotations.coco.json
+    return_masks: False
+    transforms:
+      policy:
+        epoch: [4, 29, 50]
+  total_batch_size: 12     # 4 per GPU x 3 GPUs; raise if VRAM allows
+  num_workers: 4
+  collate_fn:
+    mixup_epochs: [4, 29]
+    stop_epoch: 50
+
+val_dataloader:
+  dataset:
+    type: CocoDetection
+    img_folder: /media/local/data/detection-datasets/VisDrone/COCO/valid
+    ann_file: /media/local/data/detection-datasets/VisDrone/COCO/valid/_annotations.coco.json
+    return_masks: False
+  total_batch_size: 24
+  num_workers: 4
+
+# ---- schedule (published RT-DETRv4-L recipe) ----
+epoches: 58
+flat_epoch: 29
+no_aug_epoch: 8
+warmup_iter: 2000
+checkpoint_freq: 4
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.00001
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn)).*$'
+      weight_decay: 0.
+  lr: 0.0002
+  betas: [0.9, 0.999]
+  weight_decay: 0.000125

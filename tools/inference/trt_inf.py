@@ -138,7 +138,7 @@ def process_image(m, file_path, device):
     orig_size = torch.tensor([w, h])[None].to(device)
 
     transforms = T.Compose([
-        T.Resize((640, 640)),
+        T.Resize(tuple(m.bindings['images'].shape[2:])),
         T.ToTensor(),
     ])
     im_data = transforms(im_pil)[None]
@@ -151,7 +151,7 @@ def process_image(m, file_path, device):
     output = m(blob)
     result_images = draw([im_pil], output['labels'], output['boxes'], output['scores'])
     result_images[0].save('trt_result.jpg')
-    print("Image processing complete. Result saved as 'result.jpg'.")
+    print("Image processing complete. Result saved as 'trt_result.jpg'.")
 
 def process_video(m, file_path, device):
     cap = cv2.VideoCapture(file_path)
@@ -166,7 +166,7 @@ def process_video(m, file_path, device):
     out = cv2.VideoWriter('trt_result.mp4', fourcc, fps, (orig_w, orig_h))
 
     transforms = T.Compose([
-        T.Resize((640, 640)),
+        T.Resize(tuple(m.bindings['images'].shape[2:])),
         T.ToTensor(),
     ])
 
@@ -207,7 +207,7 @@ def process_video(m, file_path, device):
 
     cap.release()
     out.release()
-    print("Video processing complete. Result saved as 'result_video.mp4'.")
+    print("Video processing complete. Result saved as 'trt_result.mp4'.")
 
 if __name__ == '__main__':
     import argparse

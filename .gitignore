@@ -182,9 +182,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#  and can be added to the global gitignore or merged into this file. However, if you prefer,
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 
@@ -205,3 +205,24 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Model artifacts (checkpoints / exports) - large binaries, never commit
+*.pth
+*.onnx
+*.onnx.data
+*.engine
+
+# Inference tool result outputs (tools/inference/*.py write into the cwd)
+torch_results.jpg
+torch_results.mp4
+onnx_result.jpg
+onnx_result.mp4
+trt_result.jpg
+trt_result.mp4
+
+# Staged Hugging Face repo folders from tools/model_card/generate_model_card.py
+model_cards/
+rtv4_hgnetv2_visdrone/
+assets/4608285-uhd_3840_2160_24fps.mp4
+assets/5382495-uhd_3840_2160_24fps.mp4
+assets/13588981_3840_2160_30fps.mp4
