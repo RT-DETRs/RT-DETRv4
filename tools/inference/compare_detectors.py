@@ -21,6 +21,9 @@ Output (per evaluation mode)::
         <B>_miss__<A>_hit/<size>/*.jpg GT found by A but not by B
         <A>_fp_only/<size>/*.jpg       confident A false positives that B does not make
         <B>_fp_only/<size>/*.jpg       confident B false positives that A does not make
+        by_reason/<kind>/<reason>/<size>/*.jpg
+                                       the same panels split by failure reason, with their
+                                       own per-folder limit so rare reasons are not crowded out
 
 Each image shows the full frame (left) and a zoom on the object (right):
 GT in green, A in red, B in blue, each prediction labelled with its class,
@@ -222,7 +225,7 @@ def draw_box(draw, box, color, width, label=None, font=None, scale=1.0, offset=(
         draw.text((x1 + 3, ty + 2), label, fill=(255, 255, 255), font=font)
 
 
-def render_case(image, case, names, cat_names, out_path, zoom_size=640, thumb_height=360):
+def render_case(image, case, names, cat_names, out_paths, zoom_size=640, thumb_height=360):
     """Save a [full frame | zoom] panel with GT, A and B boxes and a text header."""
     font, small_font, header_font = get_font(16), get_font(13), get_font(18)
     W, H = image.size
@@ -287,8 +290,9 @@ def render_case(image, case, names, cat_names, out_path, zoom_size=640, thumb_he
         if legend_y + 20 * (i + 1) <= panel.height:
             pd.rectangle((8, legend_y + 20 * i + 3, 22, legend_y + 20 * i + 15), fill=color)
             pd.text((28, legend_y + 20 * i), text, fill=(230, 230, 230), font=small_font)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    panel.save(out_path, quality=92)
+    for out_path in out_paths:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        panel.save(out_path, quality=92)
 
 
 def draw_text_height(font):
@@ -398,16 +402,23 @@ def write_outputs(out_dir, mode, cases, stats, names, cat_names, image_paths, gt
              f'{name_a}_fp_only', f'{name_b}_fp_only']
 
     # Images (limited per kind and size bin, most confident first).
-    per_bin = defaultdict(int)
+    per_bin, per_reason = defaultdict(int), defaultdict(int)
+    by_reason_counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     cache = {'id': None, 'image': None}
     rows = []
     for case in cases:
         img_id = case['image_id']
         per_bin[(case['kind'], case['size'])] += 1
         rank = per_bin[(case['kind'], case['size'])]
-        image_file = ''
+        per_reason[(case['kind'], case['reason'], case['size'])] += 1
+        reason_rank = per_reason[(case['kind'], case['reason'], case['size'])]
+        by_reason_counts[case['kind']][case['reason']][case['size']] += 1
+        in_size_bin = args.max_images_per_bin == 0 or rank <= args.max_images_per_bin
+        in_reason_bin = (args.max_images_per_reason == 0 or
+                         0 < reason_rank <= args.max_images_per_reason)
+        image_file = reason_file = ''
         case['file_name'] = Path(image_paths.get(img_id, '')).name
-        if args.max_images_per_bin == 0 or rank <= args.max_images_per_bin:
+        if in_size_bin or in_reason_bin:
             path = image_paths.get(img_id)
             if path and Path(path).exists():
                 if cache['id'] != img_id:
@@ -416,7 +427,15 @@ def write_outputs(out_dir, mode, cases, stats, names, cat_names, image_paths, gt
                             if args.exif_transpose else opened.convert('RGB')
                     cache['id'] = img_id
                 gt_id = case['gt']['id'] if case['gt'] is not None else 0
-                out_path = out_dir / case['kind'] / case['size'] / f'{rank:04d}_img{img_id}_gt{gt_id}.jpg'
+                out_paths = []
+                if in_size_bin:
+                    out_paths.append(out_dir / case['kind'] / case['size'] /
+                                     f'{rank:04d}_img{img_id}_gt{gt_id}.jpg')
+                    image_file = str(out_paths[-1].relative_to(out_dir))
+                if in_reason_bin:
+                    out_paths.append(out_dir / 'by_reason' / case['kind'] / case['reason'] /
+                                     case['size'] / f'{reason_rank:04d}_img{img_id}_gt{gt_id}.jpg')
+                    reason_file = str(out_paths[-1].relative_to(out_dir))
                 gt_cat = (cat_names.get(case['gt']['category_id'], case['gt']['category_id'])
                           if case['gt'] is not None else '-')
                 case['header'] = [
@@ -428,15 +447,16 @@ def write_outputs(out_dir, mode, cases, stats, names, cat_names, image_paths, gt
                     f'   |   {name_b}: ' + describe(case['b'], cat_names),
                 ]
                 case['other_gts'] = [g for g in gts_by_img.get(img_id, []) if g is not case['gt']]
-                render_case(cache['image'], case, names, cat_names, out_path)
-                image_file = str(out_path.relative_to(out_dir))
-        rows.append(case_row(case, names, cat_names, image_file))
+                render_case(cache['image'], case, names, cat_names, out_paths)
+        row = case_row(case, names, cat_names, image_file)
+        row['image_by_reason'] = reason_file
+        rows.append(row)
 
     with open(out_dir / 'cases.csv', 'w', newline='') as f:
         fields = ['kind', 'size', 'reason', 'image_id', 'file_name', 'gt_id', 'gt_category', 'gt_bbox',
                   f'{name_a}_category', f'{name_a}_score', f'{name_a}_iou_to_gt', f'{name_a}_bbox',
                   f'{name_b}_category', f'{name_b}_score', f'{name_b}_iou_to_gt', f'{name_b}_bbox',
-                  'image']
+                  'image', 'image_by_reason']
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
@@ -470,6 +490,15 @@ def write_outputs(out_dir, mode, cases, stats, names, cat_names, image_paths, gt
         print(f'{size:8s} {n:6d} {fmt(entry[f"{name_a}_ap"]):>12s} {fmt(entry[f"{name_b}_ap"]):>12s} '
               f'{fmt(entry[f"{name_a}_recall"]):>14s} {fmt(entry[f"{name_b}_recall"]):>14s} '
               + ' '.join(f'{st[k]:>{max(12, len(k))}d}' for k in kinds))
+    summary['by_reason'] = {
+        kind: {reason: {size: sizes[size] for size in SIZE_NAMES if sizes.get(size)}
+               for reason, sizes in sorted(reasons.items())}
+        for kind, reasons in by_reason_counts.items()}
+    print('\nCases by reason (' + ' / '.join(SIZE_NAMES) + ') → by_reason/<kind>/<reason>/<size>/')
+    for kind in kinds:
+        for reason, sizes in sorted(by_reason_counts.get(kind, {}).items()):
+            counts = ' / '.join(str(sizes.get(size, 0)) for size in SIZE_NAMES)
+            print(f'  {kind:40s} {reason:20s} {counts}')
     with open(out_dir / 'summary.json', 'w') as f:
         json.dump(summary, f, indent=2)
     print(f'Saved {len(rows)} cases → {out_dir}')
@@ -587,6 +616,9 @@ def parse_args(argv=None):
     parser.add_argument('--max-images-per-bin', type=int, default=100,
                         help='Rendered images per case type and size bin (0 = all); '
                              'cases.csv always lists every case')
+    parser.add_argument('--max-images-per-reason', type=int, default=50,
+                        help='Rendered images per case type, reason and size bin in by_reason/ '
+                             '(0 = all, negative = do not write by_reason/)')
     parser.add_argument('--exif-transpose', action='store_true',
                         help='Apply EXIF orientation when loading images (off: like the models)')
     return parser.parse_args(argv)
